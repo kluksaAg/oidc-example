@@ -13,8 +13,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.event.GenericApplicationListenerAdapter;
 import org.springframework.context.event.SmartApplicationListener;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.SessionManagementConfigurer;
@@ -34,11 +36,25 @@ import java.lang.reflect.Method;
 public class SecurityConfig {
   private final ClientRegistrationRepository clientRegistrationRepository;
   private final DelegatingApplicationListener delegatingApplicationListener;
+  private final AuthenticationManagerBuilder authenticationManagerBuilder;
 
   public SecurityConfig(ClientRegistrationRepository clientRegistrationRepository,
-                        DelegatingApplicationListener delegatingApplicationListener) {
+                        DelegatingApplicationListener delegatingApplicationListener,
+                        AuthenticationManagerBuilder authenticationManagerBuilder) {
     this.clientRegistrationRepository = clientRegistrationRepository;
     this.delegatingApplicationListener = delegatingApplicationListener;
+    this.authenticationManagerBuilder = authenticationManagerBuilder;
+  }
+
+  @Bean
+  public AuthenticationManager authenticationManager() {
+    return new ProviderManager(
+        new OidcBackChannelLogoutAuthenticationProvider());
+  }
+
+  @Bean
+  public OidcLogoutAuthenticationConverter authenticationConverter() {
+    return new OidcLogoutAuthenticationConverter(clientRegistrationRepository);
   }
 
   @Bean
@@ -48,7 +64,7 @@ public class SecurityConfig {
 
   @Bean
   public SecurityFilterChain configure(final HttpSecurity http) throws Exception {
-
+    this.authenticationManagerBuilder.authenticationProvider(new OidcBackChannelLogoutAuthenticationProvider());
     OidcSessionRegistry sessionRegistry = new InMemoryOidcSessionRegistry();
 
     http
@@ -70,14 +86,13 @@ public class SecurityConfig {
     return http.build();
   }
 
-  private OidcBackChannelLogoutFilter backChannelLogoutFilter(final OidcSessionRegistry sessionRegistry) {
+  private OidcBackChannelLogoutFilter backChannelLogoutFilter(final OidcSessionRegistry sessionRegistry) throws Exception {
     OidcBackChannelLogoutFilter filter = new OidcBackChannelLogoutFilter(
-        new OidcLogoutAuthenticationConverter(clientRegistrationRepository),
-        new ProviderManager(
-            new OidcBackChannelLogoutAuthenticationProvider()));
+        authenticationConverter(), authenticationManager());
     filter.setLogoutHandler(backChannelLogoutHandler(sessionRegistry));
     return filter;
   }
+
 
   private OidcBackChannelLogoutHandler backChannelLogoutHandler(final OidcSessionRegistry sessionRegistry) {
     final OidcBackChannelLogoutHandler oidcBackChannelLogoutHandler = new OidcBackChannelLogoutHandler();
