@@ -1,0 +1,28 @@
+server:
+  port: 9999
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          keycloak:
+            authorization-grant-type: authorization_code
+            client-id: oidc-example
+            client-secret: 8POCER3X5BCUDYn6NnN2tVJc5T5FGKQS
+            provider: keycloak
+            scope: openid
+        provider:
+          keycloak:
+            issuer-uri: http://localhost:8080/realms/notch
+
+logging:
+  level:
+    root: INFO
+    org:
+      springframework:
+        security: TRACE
+    com:
+      wearenotch:
+        kluksa:
+          oidcexample:
+            backchannel: TRACE
