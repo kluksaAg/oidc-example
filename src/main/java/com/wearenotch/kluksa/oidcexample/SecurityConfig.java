@@ -53,11 +53,6 @@ public class SecurityConfig {
   }
 
   @Bean
-  public OidcLogoutAuthenticationConverter authenticationConverter() {
-    return new OidcLogoutAuthenticationConverter(clientRegistrationRepository);
-  }
-
-  @Bean
   public ServletListenerRegistrationBean<HttpSessionEventPublisher> httpSessionEventPublisher() {
     return new ServletListenerRegistrationBean<>(new HttpSessionEventPublisher());
   }
@@ -88,7 +83,8 @@ public class SecurityConfig {
 
   private OidcBackChannelLogoutFilter backChannelLogoutFilter(final OidcSessionRegistry sessionRegistry) throws Exception {
     OidcBackChannelLogoutFilter filter = new OidcBackChannelLogoutFilter(
-        authenticationConverter(), authenticationManager());
+        new OidcLogoutAuthenticationConverter(clientRegistrationRepository),
+        authenticationManager());
     filter.setLogoutHandler(backChannelLogoutHandler(sessionRegistry));
     return filter;
   }
@@ -97,7 +93,6 @@ public class SecurityConfig {
   private OidcBackChannelLogoutHandler backChannelLogoutHandler(final OidcSessionRegistry sessionRegistry) {
     final OidcBackChannelLogoutHandler oidcBackChannelLogoutHandler = new OidcBackChannelLogoutHandler();
     oidcBackChannelLogoutHandler.setSessionRegistry(sessionRegistry);
-    oidcBackChannelLogoutHandler.setLogoutUri("/logout");
     return oidcBackChannelLogoutHandler;
   }
 
